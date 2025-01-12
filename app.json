@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Newsly",
+    "slug": "newsly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "platforms": ["ios", "android"],
+    "extra": {
+      "NEWS_API_URL": "https://newsapi.org/v2",
+      "NEWS_COUNTRY": "us",
+      "API_KEY": "9539f36c7ab34f248d22417b01c8dc17"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
