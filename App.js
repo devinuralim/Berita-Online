@@ -23,6 +23,8 @@ import LogOut from "./screens/Logout";
 import SavedScreen from "./screens/Savedscreen";
 import { SavedArticlesContext } from "./screens/SavedArticlesContext";
 import BookmarkDetailScreen from "./screens/BookmarkDetailScreen";
+import AboutScreen from "./screens/Aboutscreen";
+
 
 
 const Stack = createStackNavigator();
@@ -84,7 +86,8 @@ const App = () => {
           <Stack.Screen name="SearchScreen" component={SearchScreen} />
           <Stack.Screen name="SavedScreen" component={HomePage} />
           <Stack.Screen name="BookmarkDetailScreen" component={BookmarkDetailScreen} />
-          <Stack.Screen name="LogOut" component={LogOut} />  
+          <Stack.Screen name="LogOut" component={LogOut} /> 
+          <Stack.Screen name="AboutScreen" component={AboutScreen} /> 
         </Stack.Navigator>
       </NavigationContainer>
     </SavedArticlesProvider>

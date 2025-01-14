@@ -11,6 +11,8 @@ import {
   SafeAreaView,
   Modal,
   ScrollView,
+  RefreshControl,
+  alert,
 } from "react-native";
 import axios from "axios";
 import NetInfo from "@react-native-community/netinfo";
@@ -57,22 +59,6 @@ const NewsScreen = ({navigation}) => {
     // ... data berita lainnya
   ]);
 
-  const renderMainNews = () => {
-    const mainArticle = news[0]; // First article as main news
-    return (
-      <TouchableOpacity
-        style={styles.mainNewsContainer}
-        onPress={() => navigation.navigate("FrameScreen", { article: mainArticle })}
-      >
-        <Image source={{ uri: mainArticle.urlToImage }} style={styles.mainNewsImage} />
-        <View style={styles.mainNewsOverlay}>
-          <Text style={styles.mainNewsTitle}>{mainArticle.title}</Text>
-          <Text style={styles.mainNewsSource}>{mainArticle.source.name}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   //category
   const renderCategoryTabs = () => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabs}>
@@ -97,7 +83,6 @@ const NewsScreen = ({navigation}) => {
       ))}
     </ScrollView>
   );
-
   const renderFeaturedNews = () => {
     const featuredArticle = news[0]; // Assuming the first article is featured
     return (
@@ -169,19 +154,27 @@ const NewsScreen = ({navigation}) => {
       setLoading(false);
       return;
     }
-
+  
     setLoading(true);
     setError(null);
-
+  
     let url = `${NEWS_API_URL}/top-headlines?country=${NEWS_COUNTRY}&apiKey=${API_KEY}`;
     if (search) {
       url = `${NEWS_API_URL}/everything?q=${search}&apiKey=${API_KEY}`;
     }
-
+  
     try {
       const response = await axios.get(url);
       if (response.data?.status === "ok" && response.data?.articles) {
-        setNews(response.data.articles);
+        const newArticles = response.data.articles;
+        
+        // Filter out duplicate articles based on URL
+        const uniqueArticles = newArticles.filter((article) => 
+          !news.some((existingArticle) => existingArticle.url === article.url)
+        );
+  
+        // Update the state with unique articles
+        setNews((prevNews) => [...prevNews, ...uniqueArticles]);
       } else {
         setError(response.data?.message || "Failed to fetch news from API.");
       }
@@ -191,6 +184,7 @@ const NewsScreen = ({navigation}) => {
       setLoading(false);
     }
   };
+  
 
   const isArticleSaved = (article) => {
     return savedArticles.some((savedArticle) => savedArticle.url === article.url);
@@ -239,7 +233,7 @@ const NewsScreen = ({navigation}) => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#002E8C" />
         <Text>Loading news...</Text>
       </View>
     );
@@ -304,8 +298,20 @@ const NewsScreen = ({navigation}) => {
   );
 };
 
-const Framescreen = ({ route }) => {
-  const { article } = route.params; // Menerima data artikel dari navigasi
+//frame screen
+const Framescreen = ({ route, navigation }) => {
+  const { article } = route.params;
+
+  useEffect(() => {
+    // Menambahkan tombol kembali di header
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="black" style={{ marginLeft: 10 }} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const saveToBookmark = async () => {
     try {
@@ -334,6 +340,7 @@ const Framescreen = ({ route }) => {
     </ScrollView>
   );
 };
+
 
 const saveArticleToBookmark = async (article) => {
   try {
@@ -364,54 +371,63 @@ const loadBookmarks = async () => {
 };
 
 
-// Saved Screen
+//saved
+const DEFAULT_IMAGE = 'https://via.placeholder.com/150'; // URL gambar default
+
 const SavedScreen = ({ navigation }) => {
   const [savedArticles, setSavedArticles] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadSavedArticles = async () => {
+    try {
+      const savedArticlesData = await AsyncStorage.getItem('savedArticles');
+      if (savedArticlesData) {
+        const parsedArticles = JSON.parse(savedArticlesData);
+        setSavedArticles(parsedArticles);
+      } else {
+        setSavedArticles([]);
+      }
+    } catch (error) {
+      console.error('Error memuat artikel yang disimpan:', error);
+    }
+  };
 
   useEffect(() => {
-    const loadSavedArticles = async () => {
-      try {
-        const savedArticlesData = await AsyncStorage.getItem('savedArticles');
-        if (savedArticlesData) {
-          const parsedArticles = JSON.parse(savedArticlesData);
-          console.log('Data yang dimuat dari AsyncStorage:', parsedArticles); // Debugging
-          setSavedArticles(parsedArticles);
-        } else {
-          console.log('Tidak ada artikel yang disimpan'); // Jika tidak ada data
-        }
-      } catch (error) {
-        console.error('Error memuat artikel yang disimpan:', error);
-      }
-    };
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadSavedArticles();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
-    loadSavedArticles();
-  }, []); // [] memastikan useEffect hanya dijalankan sekali saat komponen di-mount
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await loadSavedArticles();
+    setIsRefreshing(false);
+  };
 
   const unsaveArticle = async (articleToRemove) => {
-    // Gunakan 'url' sebagai identitas unik
     const updatedArticles = savedArticles.filter(
-      article => article.url !== articleToRemove.url
+      (article) => article.url !== articleToRemove.url
     );
-    console.log('Daftar artikel setelah penghapusan:', updatedArticles);
-    console.log('Artikel sebelum dihapus:', savedArticles);
-    console.log('Artikel yang akan dihapus:', articleToRemove);
-    console.log('Artikel yang tersisa:', savedArticles.filter(article => article.url !== articleToRemove.url));  
     setSavedArticles(updatedArticles);
-  
     try {
-      await AsyncStorage.setItem('savedArticles', JSON.stringify(updatedArticles));
+      await AsyncStorage.setItem(
+        'savedArticles',
+        JSON.stringify(updatedArticles)
+      );
     } catch (error) {
       console.error('Error menghapus artikel yang disimpan:', error);
     }
   };
 
-  const isArticleSaved = (article) => {
-    return savedArticles.some(savedArticle => savedArticle.url === article.url);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.savedContentContainer}>
+      <ScrollView
+        contentContainerStyle={styles.savedContentContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+      >
         {savedArticles.length === 0 ? (
           <Text style={styles.noSavedArticles}>Belum ada artikel yang disimpan.</Text>
         ) : (
@@ -420,12 +436,21 @@ const SavedScreen = ({ navigation }) => {
               key={article.id}
               onPress={() =>
                 navigation.navigate('BookmarkDetailScreen', { article })
-              }>
+              }
+            >
               <View style={styles.savedArticleItem}>
+                {/* Menampilkan Gambar Artikel */}
+                <Image
+                  source={{
+                    uri: article.image ? article.image : DEFAULT_IMAGE, // Check the image URL
+                  }}
+                  style={styles.articleImage}
+                  resizeMode="cover"
+                />
+
                 {/* Informasi Artikel */}
-                <Text style={styles.savedArticleTitle}>{article.title}</Text>
-                <View style={styles.articleActions}>
-                  {/* Logo Saved */}
+                <View style={styles.articleInfo}>
+                  <Text style={styles.savedArticleTitle}>{article.title}</Text>
                   <TouchableOpacity
                     onPress={() => {
                       Alert.alert(
@@ -440,10 +465,9 @@ const SavedScreen = ({ navigation }) => {
                         ],
                         { cancelable: true }
                       );
-                    }}>
-                    <Icon name="bookmark" size={24} color="#007bff" // Ubah warna jika disimpan
-                      style={isArticleSaved(article) && { fontWeight: 'bold' }} // Bold jika disimpan
-                    />
+                    }}
+                  >
+                    <Ionicons name="bookmark" size={24} color="#002E8C" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -455,7 +479,6 @@ const SavedScreen = ({ navigation }) => {
   );
 };
 
-
 // Profile Screen
 const ProfileScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -463,8 +486,10 @@ const ProfileScreen = ({ navigation }) => {
   const handlePress = (section) => {
     if (section === "Keluar") {
       setModalVisible(true);
+    } else if (section === "About") {
+      navigation.navigate('AboutScreen');
     } else {
-      Alert.alert(`Anda menekan ${section}`); // Menampilkan alert untuk opsi lain
+      Alert.alert(`Anda menekan ${section}`);
     }
   };
 
@@ -480,6 +505,7 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        {/* Kartu Profil */}
         <View style={styles.profileCard}>
           <Image
             source={require("../assets/Vector.png")}
@@ -491,31 +517,36 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Opsi Menu */}
         <View style={styles.optionsContainer}>
-          <TouchableOpacity style={styles.option} onPress={() => handlePress("Kelola Akun")}>
-            <Ionicons name="settings-outline" size={24} color="#333" />
-            <Text style={styles.optionText}>Kelola Akun</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.option} onPress={() => handlePress("Saran dan Masukan")}>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color="#333" />
-            <Text style={styles.optionText}>Saran dan Masukan</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.option} onPress={() => handlePress("Tentang Ponsel")}>
-            <Ionicons name="phone-portrait-outline" size={24} color="#333" />
-            <Text style={styles.optionText}>Tentang Ponsel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.option} onPress={() => handlePress("Hubungi Kami")}>
-            <Ionicons name="call-outline" size={24} color="#333" />
-            <Text style={styles.optionText}>Hubungi Kami</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.option, styles.lastOption]} onPress={() => handlePress("Keluar")}>
-            <Ionicons name="log-out-outline" size={24} color="red" />
-            <Text style={[styles.optionText, { color: "red" }]}>Keluar</Text>
-          </TouchableOpacity>
+          {[
+            { name: "Kelola Akun", icon: "settings-outline" },
+            { name: "Saran dan Masukan", icon: "chatbubble-ellipses-outline" },
+            { name: "Tentang Ponsel", icon: "phone-portrait-outline" },
+            { name: "Hubungi Kami", icon: "call-outline" },
+            { name: "About", icon: "information-circle-outline" },
+            { name: "Keluar", icon: "log-out-outline", color: "red" },
+          ].map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.option, option.name === "Keluar" && styles.lastOption]}
+              onPress={() => handlePress(option.name)}
+            >
+              <Ionicons
+                name={option.icon}
+                size={24}
+                color={option.color || "#fff"}
+              />
+              <Text
+                style={[
+                  styles.optionText,
+                  option.name === "Keluar" && { color: "red" },
+                ]}
+              >
+                {option.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -531,16 +562,25 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.modalTitle}>Konfirmasi Keluar</Text>
             <Text style={styles.modalText}>Apakah Anda yakin ingin keluar?</Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={confirmLogout}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={confirmLogout}
+              >
                 <Text style={styles.buttonText}>Ya</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButton} onPress={cancelLogout}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={cancelLogout}
+              >
                 <Text style={styles.buttonText}>Tidak</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Footer */}
+      <Text style={styles.footer}>NEWSLY | InfinityTeam | ARSUNIVERSITY</Text>
     </SafeAreaView>
   );
 };
@@ -577,273 +617,337 @@ const HomePage = () => {
 
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f4f4f4" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    backgroundColor: "#fefefe",
-    paddingHorizontal: 10,
-    paddingTop: 15,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#002e8c",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  // General Styles
+  safeArea: {
     flex: 1,
-    borderColor: "#002e8c",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 0,
-    marginRight: 10,
-    marginTop: -15,
+    backgroundColor: '#fff',
   },
-  
+
+  // Header Styles
+  header: {
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',  // White background for the header
+    elevation: 4,
+  },
+
+  // Search Container Styles
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',  // White background for the search container
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    height: 45,
+    flex: 1,
+    borderWidth: 2,            // Adding border to make it look neat
+    borderColor: '#002E8C',    // Blue border color for the search bar
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+
+  // Search Bar Styles
   searchBar: {
     flex: 1,
-    height: 40,
-    paddingHorizontal: 10,
+    fontSize: 15,
+    paddingLeft: 10,          // Padding to make the text not touch the edges
+    color: '#002E8C',            // Slightly darker text for better readability
   },
+
+  // Search Icon Container Styles
   searchIconContainer: {
     paddingLeft: 10,
   },
-  notificationIconContainer: { // Container untuk ikon
-        alignSelf: 'flex-end', // Posisikan ikon di bawah
-        padding: 5
-    },
+
+  // Notification Icon Styles
   notificationIcon: {
-    padding: 5,
-    alignItems: "center",
-  },
-  newsItem: {
-    flexDirection: "row",
     padding: 10,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    borderRadius: 5,
-    shadowColor: "#002e8c",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
+    backgroundColor: '#f4f4f4',  // White background for notification icon
+    borderRadius: 50,         // Circular icon
+    elevation: 3,             // Light shadow for notification icon
+    shadowColor: '#1E88E5',   // Blue shadow for the notification icon
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
 
-  bookmarkButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 10,
-  padding: 10,
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-},
+  // Category Tabs
+  categoryTabs: {
+    flexDirection: 'row',
+    marginVertical: 10,
+    marginHorizontal: 16,
+  },
+  categoryTab: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    backgroundColor: '#f5f5f5',
+    marginHorizontal: 8,
+    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  activeCategoryTab: {
+    backgroundColor: '#4285F4',
+    transform: [{ scale: 1.1 }],
+  },
+  categoryText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Featured News Section
+  featuredNewsContainer: {
+    margin: 12,
+    position: 'relative',
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#002E8C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  featuredNewsImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 10,
+    resizeMode: 'cover',
+  },
+  featuredNewsOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    backgroundColor: 'rgba(0, 46, 140, 0.5)',
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  featuredNewsTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  featuredNewsSource: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  // News Item
+  newsItem: {
+    flexDirection: 'row',
+    padding: 15,
+    marginBottom: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+    marginHorizontal: 16,
+  },
+  newsImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 15,
+  },
+  newsContent: {
+    flex: 1,
+  },
+  newsTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#000', // Changed title color to black
+  },
+  newsSource: {
+    fontSize: 14,
+    color: '#002E8C',
+    marginVertical: 5,
+  },
+  newsDate: {
+    fontSize: 12,
+    color: '#666',
+  },
 
-  // Saved Item
-  savedContentContainer:{
-        padding: 10
-    },
-    noSavedArticles:{
-        textAlign:'center',
-        padding: 20
-    },
-    savedArticleItem:{
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee'
-    },
-    savedArticleTitle:{
-        fontSize: 15,
-        fontWeight: 'bold'
-    },
+  // Loading and Empty States
+  loadingText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4285F4',
+    textAlign: 'center',
+  },
+  emptyList: {
+    fontSize: 20,
+    color: '#4285F4',
+    textAlign: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 18,
+    textAlign: 'center',
+  },
 
-  // Profile Header
-  
+  // Profile Section
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+  },
   profileCard: {
-    alignItems: 'center', // Agar gambar dan teks di tengah horizontal
-    marginBottom: 30, // Jarak antara profile card dan options
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 25,
+    elevation: 6,
   },
   profileImage: {
-    width: 110, // Ukuran gambar diperbesar
-    height: 110,
-    borderRadius: 60, // Setengah dari width/height untuk lingkaran sempurna
-    borderWidth: 3,
-    borderColor: 'white',
-    marginBottom: 10, // Jarak antara gambar dan teks
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 20,
   },
   profileDetails: {
-    alignItems: 'center', // Agar teks di tengah
+    justifyContent: 'center',
   },
   username: {
-    fontSize: 20, // Ukuran font diperbesar
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    color: '#002E8C',
   },
   userEmail: {
     fontSize: 16,
-    color: '#777',
+    color: '#002E8C',
   },
-  optionsContainer: { // Style untuk container options
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+
+  // Profile Options
+  optionsContainer: {
+    marginTop: 20,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12, // Padding vertikal diperbesar
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  lastOption: { // Style khusus untuk opsi terakhir
-    borderBottomWidth: 0, // Hilangkan border bawah
-  },
-  optionText: {
-    fontSize: 16,
-    marginLeft: 15,
-    color: '#333',
-  },
-
-    // ... style yang sudah ada
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)', // Latar belakang gelap transparan
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContainer: {
-      backgroundColor: '#002e8c', // Warna biru tua seperti di gambar
-      borderRadius: 10,
-      padding: 20,
-      elevation: 5, // Efek bayangan
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 10,
-      color: 'white',
-      textAlign: 'center'
-    },
-    modalText: {
-      fontSize: 16,
-      marginBottom: 20,
-      color: 'white',
-      textAlign: 'center'
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-    },
-    modalButton: {
-      backgroundColor: 'white',
-      paddingVertical: 10,
-      paddingHorizontal: 20,
-      borderRadius: 5,
-      marginHorizontal: 5
-    },
-      confirmButton:{
-          backgroundColor:"#FBBC05"
-      },
-    buttonText:{
-      color:"black"
-    },
-    container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor:"#fff"
-  },
-  image: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-    marginBottom: 16,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333'
-  },
-  source: {
-    fontSize: 14,
-    color: '#777',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 16,
-    marginBottom: 16,
-    color: '#333'
-  },
-    contentDetail:{
-        fontSize:15,
-        color: '#333'
-    },
-  date: {
-    fontSize: 12,
-    color: '#bbb',
-  },  
-//
-  newsImage: { width: 100, height: 100, borderRadius: 5 },
-  newsContent: { flex: 1, marginLeft: 10 },
-  newsTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 5 },
-  newsSource: { fontSize: 12, color: "#888", marginBottom: 5 },
-  newsDate: { fontSize: 12, color: "#bbb" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  errorText: { color: "red", textAlign: "center", margin: 10 },
-  emptyList: { textAlign: "center", marginTop: 20, color: "#888" },
-  text: { fontSize: 18, fontWeight: "bold" },
-  savedItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 15,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    borderRadius: 5,
-    shadowColor: "#002e8c",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: '#002E8C',
+    padding: 18,
+    borderRadius: 10,
+    marginBottom: 12,
     elevation: 3,
   },
+  optionText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  lastOption: {
+    backgroundColor: '#FFEBEE',
+  },
 
-  //
-  savedContent: { flex: 1 },
-  savedTitle: { fontSize: 16, fontWeight: "bold" },
-  savedSource: { fontSize: 14, color: "#888" },
-  savedDate: { fontSize: 12, color: "#bbb" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyText: { fontSize: 16, color: "#888" },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#000',
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#002E8C',
+    marginHorizontal: 10,
+  },
+  confirmButton: {
+    backgroundColor: '#002E8C',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  header: { flexDirection: "row", padding: 16, alignItems: "center" },
-  searchBar: { flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 8 },
-  notificationIcon: { marginLeft: 8 },
-  featuredNewsContainer: { margin: 16, position: "relative" },
-  featuredNewsImage: { width: "100%", height: 200, borderRadius: 8 },
-  featuredNewsOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: "rgba(0,0,0,0.5)", borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
-  featuredNewsTitle: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  featuredNewsSource: { color: "#fff", fontSize: 14 },
-  categoryTabs: { flexDirection: "row", marginVertical: 8, marginHorizontal: 16 },
-  categoryTab: { padding: 8, borderRadius: 16, backgroundColor: "#f5f5f5", marginHorizontal: 4 },
-  activeCategoryTab: { backgroundColor: "#4285F4" },
-  categoryText: { color: "#333" },
-  activeCategoryText: { color: "#fff" },
-  newsItem: { flexDirection: "row", margin: 16, borderBottomWidth: 1, borderBottomColor: "#eee", paddingBottom: 16 },
-  newsImage: { width: 80, height: 80, borderRadius: 8, marginRight: 16 },
-  newsContent: { flex: 1 },
-  newsTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
-  newsSource: { fontSize: 14, color: "#555", marginBottom: 4 },
-  newsDate: { fontSize: 12, color: "#888" },
+  // Footer
+  footer: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#333',
+    marginTop: 20,
+    top: -8,
+  },
+
+  // Saved Items Section
+  savedContentContainer: {
+    padding: 16,
+  },
+  noSavedArticles: {
+    fontSize: 18,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 50,
+  },
+  savedArticleItem: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    padding: 12,
+  },
+  articleImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    marginRight: 15,
+  },
+  articleInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  savedArticleTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  saveIconContainer: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#002E8C', // Bright color for the icon
+    borderRadius: 20,
+    padding: 8,
+  },
 });
 
 export default HomePage;

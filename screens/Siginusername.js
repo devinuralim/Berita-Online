@@ -1,22 +1,46 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 
-const Siginusername = ({ navigation}) => {
+const Siginusername = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
 
+  // Validasi email (email yang valid)
+  const isValidEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    return emailRegex.test(email);
+  };
+
+  // Validasi password (misalnya panjang minimal 6 karakter)
+  const isValidPassword = (password) => {
+    return password.length >= 6;
+  };
+
+  // Fungsi untuk memeriksa apakah tombol bisa ditekan
+  const isFormValid = () => {
+    return isValidEmail(email) && isValidPassword(password);
+  };
+
+  // Fungsi untuk menangani login
+  const handleLogin = () => {
+    if (isValidEmail(email) && isValidPassword(password)) {
+      // Arahkan ke halaman HomePage jika login berhasil
+      navigation.navigate('HomePage');
+    } else {
+      Alert.alert('Login Gagal', 'Email atau password yang Anda masukkan salah.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
-        <Image
-          source={
-            require('../assets/logo2.png')}
-          style={styles.logo}
-        />
+        <Image source={require('../assets/logo2.png')} style={styles.logo} />
       </View>
       <View style={styles.card}>
         <Text style={styles.title}>Masuk Akun</Text>
@@ -24,28 +48,27 @@ const Siginusername = ({ navigation}) => {
           style={styles.input}
           placeholder="Masukkan email anda"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail} // Menyimpan nilai email
         />
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.input}
             placeholder="Masukkan password anda"
             secureTextEntry={!passwordVisible}
+            value={password}
+            onChangeText={setPassword} // Menyimpan nilai password
           />
-          <TouchableOpacity
-            onPress={togglePasswordVisibility}
-            style={styles.eyeIconContainer}
-          >
-            <FontAwesome
-              name={passwordVisible ? 'eye-slash' : 'eye'}
-              size={20}
-              color="gray"
-            />
+          <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIconContainer}>
+            <FontAwesome name={passwordVisible ? 'eye-slash' : 'eye'} size={20} color="gray" />
           </TouchableOpacity>
         </View>
-       <TouchableOpacity
-                 style={styles.button}
-                 onPress={() => navigation.navigate('HomePage')}
-               >
+        {/* Tombol Masuk hanya aktif jika form valid */}
+        <TouchableOpacity
+          style={[styles.button, { opacity: isFormValid() ? 1 : 0.5 }]} // Mengubah opacity jika form tidak valid
+          onPress={handleLogin} // Menangani login saat tombol ditekan
+          disabled={!isFormValid()} // Menonaktifkan tombol jika form tidak valid
+        >
           <Text style={styles.buttonText}>Masuk</Text>
         </TouchableOpacity>
       </View>
@@ -73,7 +96,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 30,
     width: 360,
-    height:340,
+    height: 340,
     maxWidth: 380,
     alignItems: 'center',
   },

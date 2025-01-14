@@ -1,15 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
+  };
+
+  // Validasi email (email yang valid)
+  const isValidEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    return emailRegex.test(email);
+  };
+
+  // Validasi password (misalnya panjang minimal 6 karakter)
+  const isValidPassword = (password) => {
+    return password.length >= 6;
+  };
+
+  // Fungsi untuk memeriksa apakah tombol bisa ditekan
+  const isFormValid = () => {
+    return isValidEmail(email) && isValidPassword(password);
+  };
+
+  // Fungsi untuk menangani pendaftaran
+  const handleSignUp = () => {
+    if (isValidEmail(email) && isValidPassword(password)) {
+      // Arahkan ke halaman login jika pendaftaran berhasil
+      navigation.navigate('SiginScreen');
+    } else {
+      Alert.alert('Pendaftaran Gagal', 'Email atau password tidak valid.');
+    }
   };
 
   return (
@@ -26,6 +53,8 @@ const SignUpScreen = () => {
           style={styles.input}
           placeholder="Masukkan email anda"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail} // Menyimpan nilai email
         />
         <View style={styles.passwordContainer}>
           <TextInput
@@ -33,20 +62,24 @@ const SignUpScreen = () => {
             placeholder="Masukkan password anda"
             secureTextEntry={!passwordVisible}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={setPassword} // Menyimpan nilai password
           />
           <TouchableOpacity style={styles.eyeIcon} onPress={togglePasswordVisibility}>
             <FontAwesome name={passwordVisible ? 'eye' : 'eye-slash'} size={20} color="gray" />
           </TouchableOpacity>
         </View>
-        <View style={styles.termsContainer}> {/* Container untuk teks persyaratan */}
+        <View style={styles.termsContainer}>
           <Text style={styles.normalText}>
             Dengan memilih setuju dan melanjutkan di bawah, saya setuju dengan{' '}
             <Text style={styles.linkText}>Persyaratan Layanan</Text> dan{' '}
             <Text style={styles.linkText}>Kebijakan Privasi</Text>
           </Text>
         </View>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SiginScreen')}>
+        <TouchableOpacity
+          style={[styles.button, { opacity: isFormValid() ? 1 : 0.5 }]} // Mengubah opacity jika form tidak valid
+          onPress={handleSignUp} // Menangani pendaftaran saat tombol ditekan
+          disabled={!isFormValid()} // Menonaktifkan tombol jika form tidak valid
+        >
           <Text style={styles.buttonText}>Setuju dan Daftar</Text>
         </TouchableOpacity>
       </View>
@@ -59,8 +92,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#002e8c',
     padding: 15,
-    justifyContent: 'center', // Agar konten di tengah vertikal
-    alignItems: 'center', // Agar konten di tengah horizontal
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContainer: {
     alignItems: 'center',
@@ -70,11 +103,11 @@ const styles = StyleSheet.create({
     width: 250,
     height: 140,
     marginBottom: 60,
-    top:70,
+    top: 70,
   },
   card: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 60, // Border radius sudut kiri atas
+    borderTopLeftRadius: 60,
     borderTopRightRadius: 60,
     padding: 30,
     width: '110%',
@@ -91,22 +124,22 @@ const styles = StyleSheet.create({
   infoText: {
     color: '#000000',
     fontSize: 15,
-    textAlign: 'justify', // Teks info di tengah
-    marginBottom: 30, // Margin bottom disesuaikan
-    top:10,
+    textAlign: 'justify',
+    marginBottom: 30,
+    top: 10,
   },
   title: {
     color: '#00000',
     fontSize: 26,
     fontWeight: 'bold',
-    textAlign: 'justify', // Title di tengah
+    textAlign: 'justify',
     marginBottom: 20,
   },
   input: {
     backgroundColor: '#F5F5F5',
     padding: 17,
     borderRadius: 15,
-    marginBottom: 30, // Margin bottom disesuaikan
+    marginBottom: 30,
     borderWidth: 1,
     borderColor: '#002e8c',
   },
@@ -118,7 +151,7 @@ const styles = StyleSheet.create({
     right: 15,
     top: 15,
   },
-  termsContainer: { // Style untuk container teks persyaratan
+  termsContainer: {
     marginBottom: 20,
     alignItems: 'center',
   },
