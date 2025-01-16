@@ -5,7 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   FlatList,
-  ImageBackground,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +30,8 @@ const NotificationScreen = ({ navigation }) => {
             title: article.title,
             description: article.description || "No description available.",
             image: article.urlToImage || 'https://via.placeholder.com/300',
-            url: article.url, // URL untuk berita lengkap
+            url: article.url,
+            time: 'Just now', // Placeholder untuk waktu
           }));
           setNotifications(formattedNotifications);
         } else {
@@ -48,14 +49,27 @@ const NotificationScreen = ({ navigation }) => {
 
   const renderNotificationItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate('FrameScreen', { newsData: item })}
+      onPress={() => {
+        console.log('Navigating to FrameScreen with newsData:', item); // Debugging log
+        navigation.navigate('FrameScreen', { newsData: item }); // Passing the newsData
+      }}
       style={styles.notificationItem}
     >
-      <ImageBackground source={{ uri: item.image }} style={styles.notificationImage}>
-        <View style={styles.titleOverlay}>
-          <Text style={styles.title}>{item.title}</Text>
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: item.image }} style={styles.notificationImage} />
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={styles.title} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.description} numberOfLines={2}>
+          {item.description}
+        </Text>
+        <View style={styles.timeContainer}>
+          <Ionicons name="time-outline" size={16} color="#888" />
+          <Text style={styles.timeText}>{item.time}</Text>
         </View>
-      </ImageBackground>
+      </View>
     </TouchableOpacity>
   );
 
@@ -90,44 +104,61 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 19,
-    left: 16,
-    zIndex: 15,
-    padding: 8,
+    top: 30,
+    left: 10,
     backgroundColor: '#002E8C',
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    padding: 8,
+    elevation: 6,
+    zIndex: 10,
   },
   listContainer: {
-    paddingTop: 60,
+    paddingTop: 40,
     paddingHorizontal: 16,
   },
   notificationItem: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    padding: 12,
     marginBottom: 16,
     borderRadius: 8,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+    elevation: 2,
+  },
+  imageContainer: {
+    marginRight: 12,
   },
   notificationImage: {
-    width: '100%',
-    height: 200,
-    justifyContent: 'flex-end',
+    width: 60,
+    height: 60,
+    borderRadius: 8,
   },
-  titleOverlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 10,
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
+    color: '#333',
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 8,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 4,
   },
   loadingText: {
     fontSize: 18,

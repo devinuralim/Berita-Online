@@ -47,13 +47,14 @@ const FrameScreen = ({ route, navigation }) => {
     }
   };
 
-   return (
-      <SafeAreaView style={styles.container}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="white" />
+      </TouchableOpacity>
 
-      {/* Konten Artikel */}
+      {/* Article Content */}
       <ScrollView contentContainerStyle={styles.frameContentContainer}>
         <View style={styles.contentWrapper}>
           <View style={styles.titleContainer}>
@@ -68,7 +69,7 @@ const FrameScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* Gambar Artikel */}
+          {/* Article Image */}
           {article.urlToImage ? (
             <Image source={{ uri: article.urlToImage }} style={styles.frameImage} />
           ) : (
@@ -77,14 +78,14 @@ const FrameScreen = ({ route, navigation }) => {
             </View>
           )}
 
-          {/* Konten Artikel */}
+          {/* Article Content */}
           <Text style={styles.frameText}>
             {article.content || article.description || "Tidak ada konten yang tersedia."}
           </Text>
         </View>
       </ScrollView>
 
-      {/* Tombol Simpan */}
+      {/* Save Button */}
       <TouchableOpacity style={styles.saveIconContainer} onPress={handleSavePress}>
         <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={30} color="#1E88E5" />
       </TouchableOpacity>
@@ -93,22 +94,24 @@ const FrameScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#fff', // Latar belakang putih
+    backgroundColor: '#fff', // White background for the screen
   },
-  backButton: {
-    position: 'absolute',
-    top: 30,
-    left: 10,
-    backgroundColor: '#002E8C', // Biru gelap
-    borderRadius: 30,
-    padding: 12,
-    elevation: 6,
-  },
+ backButton: {
+  position: 'absolute',
+  top: 30,
+  left: 10,
+  backgroundColor: '#002E8C', // Dark blue for the back button
+  borderRadius: 20, // Kurangi nilai ini untuk mengecilkan lingkaran
+  padding: 8, // Kurangi nilai ini untuk mengecilkan ukuran tombol
+  elevation: 6,
+  zIndex: 10, // Ensure the back button is on top
+},
+
   frameContentContainer: {
-    padding: 16, // Jarak konten dengan tepi layar
-    paddingTop: 70, // Ruang untuk tombol kembali
+    padding: 16, // Content padding
+    paddingTop: 70, // Space for the back button at the top
     flexGrow: 1,
     justifyContent: 'space-between',
   },
@@ -126,27 +129,27 @@ const styles = StyleSheet.create({
     height: 250,
     resizeMode: 'cover',
     marginBottom: 20,
-    borderRadius: 12, // Rounded corners for a smoother look
+    borderRadius: 12,
   },
   frameTitle: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#000', // Dark color for contrast
+    color: '#000',
     marginBottom: 10,
   },
   frameSource: {
     fontStyle: 'italic',
-    color: '#333', // Slightly lighter grey
+    color: '#333',
   },
   frameDate: {
-    color: '#666', // Lighter grey for date
+    color: '#666',
   },
   frameText: {
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'justify',
-    color: '#333', // More neutral color for text
-    marginBottom: 30, // Extra space after text
+    color: '#333',
+    marginBottom: 30,
   },
   centered: {
     flex: 1,
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '100%',
     height: 200,
-    backgroundColor: '#BBDEFB', // Light blue for placeholder
+    backgroundColor: '#BBDEFB',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: '#ff0000', // Red color for error message
+    color: '#ff0000', // Error message color
   },
 });
 
