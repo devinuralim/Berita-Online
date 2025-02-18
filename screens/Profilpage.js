@@ -3,7 +3,7 @@ import { Image, TouchableOpacity, Modal, Pressable } from "react-native";
 import { StyleSheet, Text, View, ScrollView, Dimensions } from "react-native";
 import Ellipse3 from "../../Newsly/assets/ellipse-3.png";
 import Vector from "../../Newsly/assets/Vector.png";
-import { FontFamily, Color, FontSize, Border } from "../GlobalStyles";
+import { FontFamily, Color, FontSize, Border } from "../Globalstyles";
 
 // Mengambil dimensi layar
 const { width, height } = Dimensions.get("window");
@@ -17,7 +17,7 @@ const ProfilPage = ({ navigation }) => {
 
   const confirmLogout = () => {
     setIsLogoutModalVisible(false);
-    navigation.replace("SiginScreen"); 
+    navigation.replace("SiginScreen");
   };
 
   return (
@@ -84,7 +84,7 @@ const ProfilPage = ({ navigation }) => {
           style={styles.copyrightIcon}
         />
         <Text style={styles.footerText}>
-          NEWSLY   |   InfinityTeam   |   ARSUNIVERSITY
+          NEWSLY | InfinityTeam | ARSUNIVERSITY
         </Text>
       </View>
 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   copyrightIcon: {
     width: 16,
     height: 16,
-    marginRight: 7
+    marginRight: 7,
   },
   footerText: {
     fontSize: FontSize.size_3xs,
