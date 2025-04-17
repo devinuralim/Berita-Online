@@ -61,6 +61,34 @@ const SavedScreen = ({ navigation }) => {
   const [savedArticles, setSavedArticles] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const BookmarkDetailScreen = ({ route }) => {
+    const { theme } = useContext(ThemeContext);
+    const { article } = route.params;
+
+    return (
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <Image
+          source={{ uri: article.image || article.urlToImage }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            {article.title}
+          </Text>
+          <Text style={[styles.description, { color: theme.colors.text }]}>
+            {article.description || "Tidak ada deskripsi"}
+          </Text>
+          <Text style={[styles.contentText, { color: theme.colors.text }]}>
+            {article.content || "Tidak ada isi artikel"}
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  };
+
   const loadSavedArticles = async () => {
     try {
       const savedArticlesData = await AsyncStorage.getItem("savedArticles");
@@ -130,9 +158,7 @@ const SavedScreen = ({ navigation }) => {
           savedArticles.map((article) => (
             <TouchableOpacity
               key={article.url}
-              onPress={() =>
-                navigation.navigate("BookmarkDetailScreen", { article })
-              }
+              onPress={() => navigation.navigate("FrameScreen", { article })}
             >
               <View
                 style={[
@@ -247,6 +273,29 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "bold",
+  },
+
+  container: {
+    flex: 1,
+  },
+  image: {
+    width: "100%",
+    height: 200,
+  },
+  content: {
+    padding: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  contentText: {
+    fontSize: 16,
   },
 });
 

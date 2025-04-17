@@ -56,7 +56,7 @@ const NewsPage = ({ navigation }) => {
       const response = await axios.get(url);
       if (response.data?.status === "ok" && response.data?.articles) {
         setNews(response.data.articles);
-        setFeaturedNews(response.data.articles.slice(0, 3)); // Featured news as top 3 articles
+        setFeaturedNews(response.data.articles.slice(0, 10)); // Featured news as top 3 articles
       } else {
         setNews([]);
         setError("No news found.");
@@ -212,9 +212,12 @@ const NewsPage = ({ navigation }) => {
             style={styles.searchIcon}
           />
           <TextInput
-            style={[styles.searchBar, { color: theme.colors.text }]} // Warna teks input
+            style={[
+              styles.searchBar,
+              { color: theme === "dark" ? "gray" : "black" }, // Tetap membuat teks warna abu-abu di dark mode
+            ]}
             placeholder="Search for news"
-            placeholderTextColor={theme.colors.placeholder} // Ganti warna placeholder
+            placeholderTextColor={theme === "dark" ? "lightgray" : "gray"} // Placeholder sesuai tema
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={() => fetchNews(searchQuery)}
@@ -269,13 +272,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15, // Ruang horizontal untuk keseimbangan
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 10, // Membuat sudut lebih bulat
-    marginRight: 10, // Jarak antar tab lebih besar
+    borderRadius: 12, // Membuat sudut lebih bulat
+    marginRight: 0, // Jarak antar tab lebih besar
+    marginLeft: 10,
     backgroundColor: "#f0f0f0", // Default background untuk kategori yang tidak aktif
   },
 
   activeCategoryTab: {
-    backgroundColor: "#002E8C", // Warna aktif
+    backgroundColor: "#000", // Warna aktif
   },
 
   categoryText: {

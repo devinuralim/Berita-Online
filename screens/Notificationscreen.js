@@ -70,7 +70,7 @@ const NotificationScreen = ({ navigation }) => {
 
   const renderNotificationItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("FrameScreen", { newsData: item })}
+      onPress={() => navigation.navigate("FrameScreen", { article: item })}
       style={styles.notificationItem}
     >
       <Image source={{ uri: item.image }} style={styles.notificationImage} />
