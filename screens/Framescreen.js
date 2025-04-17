@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -7,25 +7,50 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ThemeContext } from "../ThemeContext";
 
 const FrameScreen = ({ route, navigation }) => {
-  const { article } = route.params;
+  const { article } = route.params || {};
+  const { theme } = useContext(ThemeContext);
+  const isDarkMode = theme.dark;
+
   const [isSaved, setIsSaved] = useState(false);
+  const [fullContent, setFullContent] = useState("");
 
   if (!article) {
     return (
       <SafeAreaView style={styles.centered}>
-        <Text style={styles.errorText}>Artikel tidak ditemukan.</Text>
+        <Text style={[styles.errorText, { color: theme.colors.text }]}>
+          Artikel tidak ditemukan.
+        </Text>
       </SafeAreaView>
     );
   }
 
+  useEffect(() => {
+    const fetchFullContent = async () => {
+      try {
+        const response = await fetch(
+          `http://192.168.100.142/scrape?url=${article.url}`
+        );
+        const data = await response.json();
+        setFullContent(data.content);
+      } catch (error) {
+        console.error("Gagal mengambil konten penuh:", error);
+      }
+    };
+
+    if (article?.url) {
+      fetchFullContent();
+    }
+  }, [article?.url]);
+
   const handleSavePress = async () => {
     try {
-      let savedArticles = await AsyncStorage.getItem('savedArticles');
+      let savedArticles = await AsyncStorage.getItem("savedArticles");
       let articlesArray = savedArticles ? JSON.parse(savedArticles) : [];
       const isArticleAlreadySaved = articlesArray.some(
         (savedArticle) => savedArticle.title === article.title
@@ -41,146 +66,151 @@ const FrameScreen = ({ route, navigation }) => {
         setIsSaved(true);
       }
 
-      await AsyncStorage.setItem('savedArticles', JSON.stringify(articlesArray));
+      await AsyncStorage.setItem(
+        "savedArticles",
+        JSON.stringify(articlesArray)
+      );
     } catch (error) {
-      console.error('Error menyimpan/menghapus artikel:', error);
+      console.error("Error menyimpan/menghapus artikel:", error);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="white" />
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
+      >
+        <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
       </TouchableOpacity>
 
-      {/* Article Content */}
-      <ScrollView contentContainerStyle={styles.frameContentContainer}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.frameContentContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
         <View style={styles.contentWrapper}>
           <View style={styles.titleContainer}>
-            <Text style={styles.frameTitle}>{article.title}</Text>
+            <Text style={[styles.frameTitle, { color: theme.colors.text }]}>
+              {article.title}
+            </Text>
             <View style={styles.infoContainer}>
-              <Text style={styles.frameSource}>Sumber: {article.source?.name || '-'}</Text>
-              <Text style={styles.frameDate}>
+              <Text
+                style={[
+                  styles.frameSource,
+                  { color: theme.colors.placeholder },
+                ]}
+              >
+                Sumber: {article.source?.name || "-"}
+              </Text>
+              <Text
+                style={[styles.frameDate, { color: theme.colors.placeholder }]}
+              >
                 {article.publishedAt
                   ? new Date(article.publishedAt).toLocaleDateString()
-                  : '-'}
+                  : "-"}
               </Text>
             </View>
           </View>
 
-          {/* Article Image */}
           {article.urlToImage ? (
-            <Image source={{ uri: article.urlToImage }} style={styles.frameImage} />
+            <Image
+              source={{ uri: article.urlToImage }}
+              style={styles.frameImage}
+            />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.placeholderText}>Gambar Tidak Tersedia</Text>
+              <Text
+                style={[styles.placeholderText, { color: theme.colors.text }]}
+              >
+                Gambar Tidak Tersedia
+              </Text>
             </View>
           )}
 
-          {/* Article Content */}
-          <Text style={styles.frameText}>
-            {article.content || article.description || "Tidak ada konten yang tersedia."}
+          <Text style={[styles.frameText, { color: theme.colors.text }]}>
+            {fullContent ||
+              article.content ||
+              "Tidak ada konten yang tersedia."}
           </Text>
         </View>
       </ScrollView>
 
-      {/* Save Button */}
-      <TouchableOpacity style={styles.saveIconContainer} onPress={handleSavePress}>
-        <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={30} color="#1E88E5" />
+      <TouchableOpacity
+        style={[
+          styles.saveIconContainer,
+          { backgroundColor: isDarkMode ? "#E3F2FD" : theme.colors.card },
+        ]}
+        onPress={handleSavePress}
+      >
+        <Ionicons
+          name={isSaved ? "bookmark" : "bookmark-outline"}
+          size={30}
+          color={theme.colors.primary}
+        />
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff', // White background for the screen
+  container: { flex: 1 },
+  backButton: {
+    position: "absolute",
+    top: 30,
+    left: 10,
+    borderRadius: 20,
+    padding: 8,
+    elevation: 6,
+    zIndex: 10,
   },
- backButton: {
-  position: 'absolute',
-  top: 30,
-  left: 10,
-  backgroundColor: '#002E8C', // Dark blue for the back button
-  borderRadius: 20, // Kurangi nilai ini untuk mengecilkan lingkaran
-  padding: 8, // Kurangi nilai ini untuk mengecilkan ukuran tombol
-  elevation: 6,
-  zIndex: 10, // Ensure the back button is on top
-},
-
   frameContentContainer: {
-    padding: 16, // Content padding
-    paddingTop: 70, // Space for the back button at the top
+    padding: 16,
+    paddingTop: 70,
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
-  contentWrapper: {
-    flex: 1,
-  },
-  titleContainer: {
-    marginBottom: 20,
-  },
-  infoContainer: {
-    marginBottom: 10,
-  },
+  contentWrapper: { flex: 1 },
+  titleContainer: { marginBottom: 20 },
+  infoContainer: { marginBottom: 10 },
   frameImage: {
-    width: '100%',
+    width: "100%",
     height: 250,
-    resizeMode: 'cover',
+    resizeMode: "cover",
     marginBottom: 20,
     borderRadius: 12,
   },
-  frameTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 10,
-  },
-  frameSource: {
-    fontStyle: 'italic',
-    color: '#333',
-  },
-  frameDate: {
-    color: '#666',
-  },
+  frameTitle: { fontSize: 26, fontWeight: "bold", marginBottom: 10 },
+  frameSource: { fontStyle: "italic" },
+  frameDate: {},
   frameText: {
     fontSize: 16,
     lineHeight: 24,
-    textAlign: 'justify',
-    color: '#333',
+    textAlign: "justify",
     marginBottom: 30,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   imagePlaceholder: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    backgroundColor: '#BBDEFB',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 12,
+    backgroundColor: "#888",
   },
-  placeholderText: {
-    color: '#002E8C',
-    fontSize: 16,
-  },
+  placeholderText: { fontSize: 16 },
   saveIconContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
     padding: 12,
-    backgroundColor: '#E3F2FD',
     borderRadius: 50,
     elevation: 6,
   },
-  errorText: {
-    fontSize: 18,
-    color: '#ff0000', // Error message color
-  },
+  errorText: { fontSize: 18 },
 });
 
 export default FrameScreen;

@@ -1,20 +1,29 @@
-import * as React from "react";
-import { Image, TouchableOpacity, Modal, Pressable } from "react-native";
-import { StyleSheet, Text, View, ScrollView, Dimensions } from "react-native";
+import React, { useContext, useState } from "react";
+import {
+  Image,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Dimensions,
+} from "react-native";
 import Ellipse3 from "../../Newsly/assets/ellipse-3.png";
 import Vector from "../../Newsly/assets/Vector.png";
 import { FontFamily, Color, FontSize, Border } from "../Globalstyles";
+import { ThemeContext } from "../ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
-// Mengambil dimensi layar
 const { width, height } = Dimensions.get("window");
 
 const ProfilPage = ({ navigation }) => {
-  const [isLogoutModalVisible, setIsLogoutModalVisible] = React.useState(false);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
+  const { theme, toggleTheme } = useContext(ThemeContext);
+  const isDarkMode = theme.dark;
 
-  const handleLogout = () => {
-    setIsLogoutModalVisible(true);
-  };
-
+  const handleLogout = () => setIsLogoutModalVisible(true);
   const confirmLogout = () => {
     setIsLogoutModalVisible(false);
     navigation.replace("SiginScreen");
@@ -22,14 +31,16 @@ const ProfilPage = ({ navigation }) => {
 
   return (
     <ScrollView
-      style={styles.scrollContainer}
+      style={[
+        styles.scrollContainer,
+        { backgroundColor: theme.colors.background },
+      ]}
       contentContainerStyle={styles.profilPage}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.programmingContainer}>
         <Image
           style={styles.programmingBackground}
-          contentFit="cover"
           source={require("../assets/programming.jpg")}
         />
       </View>
@@ -40,7 +51,6 @@ const ProfilPage = ({ navigation }) => {
             styles.profilPageChild,
             { width: width * 0.25, height: width * 0.25 },
           ]}
-          contentFit="cover"
           source={Ellipse3}
         />
         <Image
@@ -48,17 +58,34 @@ const ProfilPage = ({ navigation }) => {
             styles.vectorIcon,
             { width: width * 0.25, height: width * 0.25 },
           ]}
-          contentFit="cover"
           source={Vector}
         />
       </View>
 
-      {/* Nama Pengguna */}
-      <Text style={styles.infinityteam}>Infinityteam</Text>
+      <Text style={[styles.infinityteam, { color: theme.colors.text }]}>
+        Infinityteam
+      </Text>
 
-      {/* Opsi Menu */}
+      {/* Tombol Dark Mode */}
+      <TouchableOpacity
+        onPress={toggleTheme}
+        style={[
+          styles.toggleButton,
+          {
+            backgroundColor: isDarkMode ? theme.colors.card : theme.colors.card,
+          },
+        ]}
+      >
+        <Ionicons
+          name={isDarkMode ? "sunny" : "moon"}
+          size={24}
+          color={theme.colors.primary}
+        />
+      </TouchableOpacity>
+
+      {/* Menu Items - Menjadi lebih dekat dengan atas */}
       <View style={styles.menuContainer}>
-        <MenuItem icon={require("../assets/avatar.jpg")} text="Kelola Akun" />
+        <MenuItem icon={require("../assets/profil.png")} text="Kelola Akun" />
         <MenuItem
           icon={require("../assets/message.jpg")}
           text="Saran dan Masukan"
@@ -77,37 +104,51 @@ const ProfilPage = ({ navigation }) => {
         />
       </View>
 
-      {/* Footer */}
       <View style={styles.footerContainer}>
         <Image
           source={require("../assets/copyright.jpg")}
           style={styles.copyrightIcon}
         />
-        <Text style={styles.footerText}>
+        <Text style={[styles.footerText, { color: theme.colors.placeholder }]}>
           NEWSLY | InfinityTeam | ARSUNIVERSITY
         </Text>
       </View>
 
-      {/* Logout Modal */}
+      {/* Modal Logout */}
       <Modal
         animationType="fade"
-        transparent={true}
+        transparent
         visible={isLogoutModalVisible}
         onRequestClose={() => setIsLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Keluar</Text>
+          <View
+            style={[styles.modalView, { backgroundColor: theme.colors.card }]}
+          >
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+              Keluar
+            </Text>
             <View style={styles.modalButtonContainer}>
+              {/* Tombol Ya */}
               <Pressable
                 style={({ pressed }) => [
                   styles.modalButton,
                   pressed && styles.buttonPressed,
+                  { marginRight: 10 }, // Menambahkan jarak antara tombol
                 ]}
                 onPress={confirmLogout}
               >
-                <Text style={styles.modalButtonText}>Ya</Text>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: "#0066FF" }, // Warna biru untuk "Ya"
+                  ]}
+                >
+                  Ya
+                </Text>
               </Pressable>
+
+              {/* Tombol Tidak */}
               <Pressable
                 style={({ pressed }) => [
                   styles.modalButton,
@@ -115,7 +156,14 @@ const ProfilPage = ({ navigation }) => {
                 ]}
                 onPress={() => setIsLogoutModalVisible(false)}
               >
-                <Text style={styles.modalButtonText}>Tidak</Text>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  Tidak
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -125,23 +173,25 @@ const ProfilPage = ({ navigation }) => {
   );
 };
 
-const MenuItem = ({ icon, text, onPress, style }) => (
-  <TouchableOpacity onPress={onPress} style={styles.menuItem}>
-    <Image source={icon} style={[styles.menuIcon, style]} />
-    <Text style={styles.menuText}>{text}</Text>
-  </TouchableOpacity>
-);
+const MenuItem = ({ icon, text, onPress, style }) => {
+  const { theme } = useContext(ThemeContext);
+
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.menuItem}>
+      <Image
+        source={icon}
+        style={[styles.menuIcon, style, { tintColor: theme.colors.text }]}
+      />
+      <Text style={[styles.menuText, { color: theme.colors.text }]}>
+        {text}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: Color.colorWhite,
-  },
-  profilPage: {
-    paddingBottom: 20,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
+  scrollContainer: { flex: 1 },
+  profilPage: { paddingBottom: 20, alignItems: "center" },
   programmingContainer: {
     width: width,
     height: height * 0.25,
@@ -156,33 +206,21 @@ const styles = StyleSheet.create({
     top: -10,
   },
   profileContainer: {
-    position: "relative",
     justifyContent: "center",
     alignItems: "center",
     marginTop: -45,
   },
-  profilPageChild: {
-    borderRadius: 100,
-    borderWidth: 3,
-    borderColor: "white",
-  },
-  vectorIcon: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-  },
+  profilPageChild: { borderRadius: 100, borderWidth: 3, borderColor: "white" },
+  vectorIcon: { position: "absolute", bottom: 0, right: 0 },
   infinityteam: {
     fontSize: FontSize.size_lg,
     fontWeight: "700",
     fontFamily: FontFamily.poppinsSemiBold,
     textAlign: "center",
-    color: Color.colorBlack,
     marginTop: 10,
   },
-  menuContainer: {
-    width: "90%",
-    marginTop: 15,
-  },
+  toggleButton: { marginTop: 5, padding: 10, borderRadius: 50 },
+  menuContainer: { width: "90%", marginTop: 20, top: -30 },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -190,15 +228,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Color.colorGray_200,
   },
-  menuIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 20,
-  },
-  informationIcon: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
+  menuIcon: { width: 20, height: 20, marginRight: 20 },
+  informationIcon: { borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
   menuText: {
     fontSize: FontSize.size_base,
     fontFamily: FontFamily.poppinsMedium,
@@ -208,23 +239,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
   },
-  copyrightIcon: {
-    width: 16,
-    height: 16,
-    marginRight: 7,
-  },
-  footerText: {
-    fontSize: FontSize.size_3xs,
-    textAlign: "center",
-    color: Color.colorGray_200,
-  },
+  copyrightIcon: { width: 16, height: 16, marginRight: 7, top: -20 },
+  footerText: { fontSize: FontSize.size_3xs, textAlign: "center", top: -20 },
 
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalView: {
     backgroundColor: "#002E8C",
@@ -234,28 +256,16 @@ const styles = StyleSheet.create({
     width: "65%",
     maxWidth: 250,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "white",
-    marginBottom: 20,
-    fontFamily: FontFamily.poppinsSemiBold,
-  },
-  modalButtonContainer: {
-    width: "80%",
-    gap: 15,
-    marginBottom: 10,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "600", marginBottom: 20 },
+  modalButtonContainer: { width: "80%", gap: 15, marginBottom: 10 },
   modalButton: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 25,
     padding: 10,
-    width: "100%",
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: Color.colorGray_200,
   },
-  buttonPressed: {
-    backgroundColor: "#FBBC05",
-  },
+  buttonPressed: { backgroundColor: Color.colorGray_200 },
   modalButtonText: {
     color: "#002E8C",
     fontWeight: "800",
